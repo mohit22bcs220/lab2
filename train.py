@@ -1,72 +1,77 @@
-import os
-import json
-import joblib
-import pandas as pd
-import numpy as np
-import os
-
-from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LinearRegression, Ridge
 from sklearn.preprocessing import StandardScaler
-from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, r2_score
+import json
+import os
 
-# Paths
-DATA_PATH = "dataset/winequality-red.csv"
-MODEL_DIR = "outputs/model"
-RESULTS_DIR = "outputs/results"
+experiments = []
 
-os.makedirs(MODEL_DIR, exist_ok=True)
-os.makedirs(RESULTS_DIR, exist_ok=True)
+configs = [
+    {
+        "name": "Baseline",
+        "model": LinearRegression(),
+        "scale": True,
+        "test_size": 0.2,
+        "features": None
+    },
+    {
+        "name": "Ridge_alpha_1",
+        "model": Ridge(alpha=1.0),
+        "scale": True,
+        "test_size": 0.2,
+        "features": None
+    },
+    {
+        "name": "Feature_Subset",
+        "model": LinearRegression(),
+        "scale": True,
+        "test_size": 0.2,
+        "features": [0, 1]  # example subset
+    },
+    {
+        "name": "No_Scaling_70_30",
+        "model": LinearRegression(),
+        "scale": False,
+        "test_size": 0.3,
+        "features": None
+    }
+]
 
-# Load dataset
-df = pd.read_csv(DATA_PATH, sep=";")
+for cfg in configs:
+    X_exp = X if cfg["features"] is None else X[:, cfg["features"]]
 
-# Feature selection (correlation-based)
-corr = df.corr()["quality"].abs()
-selected_features = corr[corr > 0.2].index.drop("quality")
+    X_train, X_test, y_train, y_test = train_test_split(
+        X_exp, y, test_size=cfg["test_size"], random_state=42
+    )
 
-X = df[selected_features]
-y = df["quality"]
+    if cfg["scale"]:
+        pipeline = Pipeline([
+            ("scaler", StandardScaler()),
+            ("model", cfg["model"])
+        ])
+    else:
+        pipeline = Pipeline([
+            ("model", cfg["model"])
+        ])
 
-# Train-test split
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.2, random_state=42
-)
+    pipeline.fit(X_train, y_train)
+    preds = pipeline.predict(X_test)
 
-# Model pipeline (preprocessing + model)
-pipeline = Pipeline([
-    ("scaler", StandardScaler()),
-    ("model", Ridge(alpha=1.0))
-])
+    mse = mean_squared_error(y_test, preds)
+    r2 = r2_score(y_test, preds)
 
-# Train model
-pipeline.fit(X_train, y_train)
+    experiments.append({
+        "experiment": cfg["name"],
+        "mse": mse,
+        "r2": r2
+    })
 
-# Predictions
-y_pred = pipeline.predict(X_test)
-
-# Metrics
-mse = mean_squared_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
-
-# Print metrics (important for GitHub Actions)
-print(f"MSE: {mse}")
-print(f"R2 Score: {r2}")
-
-# Save model
-model_path = os.path.join(MODEL_DIR, "model.joblib")
-joblib.dump(pipeline, model_path)
-
-# Save metrics
-metrics = {
-    "mse": mse,
-    "r2_score": r2
-}
-
-metrics_path = os.path.join(RESULTS_DIR, "metrics.json")
-with open(metrics_path, "w") as f:
-    json.dump(metrics, f, indent=4)
+# Save all experiment results
+os.makedirs("outputs/results", exist_ok=True)
+with open("outputs/results/experiments.json", "w") as f:
+    json.dump(experiments, f, indent=4)
 
 
 
@@ -74,6 +79,14 @@ summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
 
 if summary_path:
     with open(summary_path, "a") as f:
-        f.write("## 📊 Model Evaluation Metrics\n")
+        f.write("## Model Evaluation Metrics\n")
         f.write(f"- **Mean Squared Error (MSE):** {mse:.4f}\n")
         f.write(f"- **R² Score:** {r2:.4f}\n")
+if summary_path:
+    with open(summary_path, "a") as f:
+        f.write("\n## Experiment Results\n")
+        for exp in experiments:
+            f.write(
+                f"- **{exp['experiment']}** → "
+                f"MSE: {exp['mse']:.4f}, R²: {exp['r2']:.4f}\n"
+            )
