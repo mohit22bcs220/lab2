@@ -52,7 +52,15 @@ configs = [
 ]
 
 for cfg in configs:
-    X_exp = X if cfg["features"] is None else X[:, cfg["features"]]
+    if cfg["features"] is None or len(cfg["features"]) == 0:
+        X_exp = X
+    elif max(cfg["features"]) >= X.shape[1]:
+        # Skip invalid feature subset
+        print(f"Skipping {cfg['name']} due to invalid feature indices")
+        continue
+    else:
+        X_exp = X[:, cfg["features"]]
+
 
     X_train, X_test, y_train, y_test = train_test_split(
         X_exp, y, test_size=cfg["test_size"], random_state=42
