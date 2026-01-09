@@ -1,13 +1,13 @@
 # MLOps Lab 2 – Automated Model Training with CI/CD
 
-## 📌 Overview
+## About
 This project demonstrates a complete MLOps workflow using Python, Git, and GitHub Actions.
 The objective is to build a reproducible machine learning pipeline that performs multiple
 experiments, evaluates model performance, and runs automatically using CI/CD.
 
 ---
 
-## 📂 Dataset
+## Dataset
 - **Dataset Name:** Wine Quality (Red)
 - **Source:** UCI Machine Learning Repository
 - **File:** `winequality-red.csv`
@@ -17,7 +17,7 @@ experiments, evaluates model performance, and runs automatically using CI/CD.
 
 ---
 
-## ⚙️ Project Structure
+## Project Structure
       mlops/
       │── dataset/
       │ └── winequality-red.csv
