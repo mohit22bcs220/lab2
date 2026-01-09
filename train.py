@@ -6,6 +6,18 @@ from sklearn.metrics import mean_squared_error, r2_score
 import json
 import os
 
+import pandas as pd
+import numpy as np
+
+# Load dataset
+data_path = "dataset/winequality-red.csv"  # change if needed
+df = pd.read_csv(data_path)
+
+# Assume last column is target
+X = df.iloc[:, :-1].values
+y = df.iloc[:, -1].values
+
+
 experiments = []
 
 configs = [
