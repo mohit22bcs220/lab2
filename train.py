@@ -3,6 +3,7 @@ import json
 import joblib
 import pandas as pd
 import numpy as np
+import os
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -66,3 +67,13 @@ metrics = {
 metrics_path = os.path.join(RESULTS_DIR, "metrics.json")
 with open(metrics_path, "w") as f:
     json.dump(metrics, f, indent=4)
+
+
+
+summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
+
+if summary_path:
+    with open(summary_path, "a") as f:
+        f.write("## 📊 Model Evaluation Metrics\n")
+        f.write(f"- **Mean Squared Error (MSE):** {mse:.4f}\n")
+        f.write(f"- **R² Score:** {r2:.4f}\n")
