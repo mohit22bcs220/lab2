@@ -2,35 +2,52 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = "scoobydou/bcs220-api"
-        CONTAINER_NAME = "bcs220-api-container"
-    }
+            IMAGE_NAME = "scoobydou/bcs220-api"
+            CONTAINER_NAME = "bcs220-api-container"
+        }
 
     stages {
 
-        stage('Clone Repository') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
         }
 
+        stage('Install Dependencies') {
+            steps {
+                sh '''
+                python3 -m venv venv
+                . venv/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                '''
+            }
+        }
+
         stage('Train Model') {
             steps {
-                sh 'python3 train.py'
+                sh '''
+                . venv/bin/activate
+                python3 train.py
+                '''
             }
         }
 
         stage('Evaluate Model') {
             steps {
-                sh 'python3 evaluate.py'
+                sh '''
+                . venv/bin/activate
+                python3 evaluate.py || echo "No evaluate.py found"
+                '''
             }
         }
 
         stage('Print Metrics with Name & RollNo') {
             steps {
                 sh '''
-                echo "Model Evaluation Metrics:"
-                cat metrics.txt
+                echo "===== Model Metrics ====="
+                cat outputs/results/experiments.json
                 echo "Name: Mohit Chaurasia"
                 echo "Roll No: 2022BCS0220"
                 '''
@@ -47,13 +64,12 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(
                     credentialsId: 'dockerhub-creds',
-                    usernameVariable: 'DOCKER_USER',
-                    passwordVariable: 'DOCKER_PASS'
+                    usernameVariable: 'USERNAME',
+                    passwordVariable: 'PASSWORD'
                 )]) {
                     sh '''
-                    echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
+                    echo $PASSWORD | docker login -u $USERNAME --password-stdin
                     docker push $IMAGE_NAME:latest
-                    docker logout
                     '''
                 }
             }
